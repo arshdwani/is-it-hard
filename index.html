@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Is It Actually Hard? · Benchmark gate simulator</title>
+  <meta name="description" content="A model failed your benchmark task a few times. Is the task hard, or did you not run it enough? Drag the sliders and find out.">
+  <meta property="og:title" content="Is It Actually Hard? · Benchmark gate simulator">
+  <meta property="og:description" content="A clean 0 for 5 proves less than you think. Drag the sliders and see what your test can really tell you.">
+  <meta property="og:url" content="https://arshdwani.github.io/is-it-hard/">
+  <meta name="theme-color" content="#2340f0">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="intro">
+    <p class="mono kicker">Benchmark gate simulator</p>
+    <h1>Is it actually hard?</h1>
+    <p class="lede">A model failed your task a few times. Is the task hard, or did you just not run it enough? Set your gate, drag the true solve rate, and see what your test can really tell you.</p>
+  </header>
+
+  <main class="layout">
+    <section class="result" aria-label="Result">
+      <p class="hero" id="hero-value">53%</p>
+      <p class="hero-note" id="hero-note" aria-live="polite"></p>
+    </section>
+
+    <form class="controls" id="controls" aria-label="Gate settings" onsubmit="return false">
+      <div class="field">
+        <label for="n">Attempts per task</label>
+        <output id="n-out" for="n"></output>
+        <input type="range" id="n" min="1" max="40" step="1">
+        <p class="help">How many runs you pay for.</p>
+      </div>
+      <div class="field">
+        <label for="k">Solves allowed</label>
+        <output id="k-out" for="k"></output>
+        <input type="range" id="k" min="0" max="5" step="1">
+        <p class="help">The most solves a task can have and still count as hard.</p>
+      </div>
+      <div class="field">
+        <label for="p">True solve rate</label>
+        <output id="p-out" for="p"></output>
+        <input type="range" id="p" min="0" max="100" step="1">
+        <p class="help">The model's real rate, which you never get to see.</p>
+      </div>
+      <fieldset class="field">
+        <legend>Grader misses correct solutions</legend>
+        <div class="segments" id="miss">
+          <label><input type="radio" name="miss" value="0"><span>Never</span></label>
+          <label><input type="radio" name="miss" value="10"><span>10%</span></label>
+          <label><input type="radio" name="miss" value="25"><span>25%</span></label>
+        </div>
+        <p class="help">A broken grader makes easy tasks look hard.</p>
+      </fieldset>
+      <div class="buttons">
+        <button type="button" class="btn primary" id="pin">Pin this gate to compare</button>
+        <button type="button" class="btn" id="reset">Reset</button>
+      </div>
+    </form>
+
+    <div class="board">
+      <section class="tiles" aria-label="What this gate can tell you">
+        <div class="tile"><p class="t-label">A hard task, 10% solve rate</p><p class="t-value" id="t-hard"></p><p class="t-note">passes, as it should</p></div>
+        <div class="tile"><p class="t-label">An easy task, 50% solve rate</p><p class="t-value" id="t-easy"></p><p class="t-note">slips through anyway</p></div>
+        <div class="tile"><p class="t-label" id="t-clean-label"></p><p class="t-value" id="t-clean"></p><p class="t-note">true solve rate, at 95% confidence</p></div>
+        <div class="tile"><p class="t-label">To prove a task is under 10%</p><p class="t-value" id="t-runs"></p><p class="t-note">clean runs in a row, with zero solves</p></div>
+      </section>
+
+      <section class="panel" aria-labelledby="curve-title">
+        <div class="panel-head">
+          <div>
+            <h2 id="curve-title">How well your gate separates hard from easy</h2>
+            <p class="sub">Chance of passing at every true solve rate. A sharp gate drops steeply. Click or drag to set the rate.</p>
+          </div>
+          <div class="legend" id="curve-legend"></div>
+        </div>
+        <div class="chart" id="curve"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="bars-title">
+        <div class="panel-head">
+          <div>
+            <h2 id="bars-title">What one test of this task could look like</h2>
+            <p class="sub" id="bars-sub"></p>
+          </div>
+          <div class="legend">
+            <span class="key"><i class="sw pass"></i>Passes the gate</span>
+            <span class="key"><i class="sw fail"></i>Fails the gate</span>
+          </div>
+        </div>
+        <div class="chart" id="bars"></div>
+      </section>
+
+      <details class="panel numbers">
+        <summary>See the numbers as a table</summary>
+        <div class="tables">
+          <table>
+            <caption>Chance of passing by true solve rate</caption>
+            <thead><tr id="curve-head"></tr></thead>
+            <tbody id="curve-rows"></tbody>
+          </table>
+          <table>
+            <caption id="bars-caption"></caption>
+            <thead><tr><th scope="col">Solves</th><th scope="col">Chance</th><th scope="col">Result</th></tr></thead>
+            <tbody id="bars-rows"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <section class="method">
+        <h2>How this works</h2>
+        <p>Every number is exact binomial maths, computed in your browser. There's no sampling and no real benchmark data. It assumes attempts are independent and the solve rate stays fixed, which real agents only roughly do.</p>
+        <p>"Hard" and "easy" mean 10% and 50% true solve rates here. The hidden-rate figure is a one-sided 95% Clopper-Pearson upper bound.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="mono">
+    Built by <a href="https://arshdwani.github.io/">Arshd Rashid Wani</a> · <a href="https://github.com/arshdwani/is-it-hard">Source on GitHub</a>
+  </footer>
+
+  <div class="tip" id="tip" role="status" hidden></div>
+
+  <script src="math.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
